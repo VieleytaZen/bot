@@ -1,19 +1,19 @@
 require("dotenv").config();
 
-global.owner = ["62895331520602"]; // wajib di isi tidak boleh kosong
-global.mods = ["62895331520602"]; // wajib di isi tidak boleh kosong
-global.prems = ["62895331520602"]; // wajib di isi tidak boleh kosong
-global.nameowner = "Tio"; // wajib di isi tidak boleh kosong
-global.numberowner = "62895331520602"; // wajib di isi tidak boleh kosong
-global.mail = "support@tioprm.eu.org"; // wajib di isi tidak boleh kosong
+global.owner = ["6282133692292"]; // wajib di isi tidak boleh kosong
+global.mods = ["6282133692292"]// wajib di isi tidak boleh kosong
+global.prems = ["6282133692292"]; // wajib di isi tidak boleh kosong
+global.nameowner = "Kii"; // wajib di isi tidak boleh kosong
+global.numberowner = "6282133692292"; // wajib di isi tidak boleh kosong
+global.mail = "vieleytazen@gmail.com"; // wajib di isi tidak boleh kosong
 global.gc = "https://chat.whatsapp.com/I5RpePh2b5u37OyFjzCNTr"; // wajib di isi tidak boleh kosong
-global.instagram = "https://instagram.com/prm2.0"; // wajib di isi tidak boleh kosong
-global.wm = "© BOTCAHX"; // isi nama bot atau nama kalian
+global.instagram = "https://instagram.com/vieleyta_zen"; // wajib di isi tidak boleh kosong
+global.wm = "ig: vielyeta_zen"; // isi nama bot atau nama kalian
 global.wait = "_*Tunggu sedang di proses...*_"; // ini pesan simulasi loading
 global.eror = "_*Server Error*_"; // ini pesan saat terjadi kesalahan
 global.stiker_wait = "*⫹⫺ Stiker sedang dibuat...*"; // ini pesan simulasi saat loading pembuatan sticker
-global.packname = "Made With"; // watermark stikcker packname
-global.author = "Bot WhatsApp"; // watermark stikcker author
+global.packname = "Viel"; // watermark stikcker packname
+global.author = "ig: vielyeta_zen"; // watermark stikcker author
 global.maxwarn = "5"; // Peringatan maksimum Warn
 
 global.autobio = false; // Set true/false untuk mengaktifkan atau mematikan autobio (default: false)
@@ -22,7 +22,7 @@ global.spam = false; // Set true/false untuk anti spam (default: false)
 global.gcspam = false; // Set true/false untuk menutup grup ketika spam (default: false)
 
 // APIKEY INI WAJIB DI ISI! //
-global.btc = "YOUR_APIKEY_HERE";
+global.btc = "viel";
 // global.btc = process.env.API_KEY_BTC;
 // aktifkan akses .env di atas jika kamu ingin menaruh key api di .env
 // Daftar terlebih dahulu https://api.botcahx.eu.org
