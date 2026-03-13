@@ -1,28 +1,30 @@
-// Mengambil data dari global
-var name = global.nameowner
-var numberowner = global.numberowner
-var gmail = global.mail
-var instagram = global.instagram // Pastikan ini ada di config.js
-
 var handler = async (m, { conn }) => {
-    // Membersihkan nomor dari karakter non-angka agar waid valid
-    // Contoh: +62 812... menjadi 62812...
-    let cleanNumber = numberowner.replace(/[^0-9]/g, '')
+    // 1. Ambil data global
+    let name = global.nameowner || 'Owner'
+    let rawNumber = global.numberowner || '628xxx' // sesuaikan
+    let gmail = global.mail || 'tidak ada'
+    let instagram = global.instagram || '-'
 
+    // 2. BERSIHKAN NOMOR: Menghapus semua karakter kecuali angka
+    // Dan pastikan tidak ada spasi atau tanda + di awal untuk waid
+    let cleanNumber = rawNumber.replace(/[^0-9]/g, '')
+
+    // 3. Susun vCard dengan format yang lebih standar
     const vcard = `BEGIN:VCARD
 VERSION:3.0
 N:;${name};;;
 FN:${name}
-ORG:Creator Bot;
+ORG:Creator Bot
 TEL;type=CELL;type=VOICE;waid=${cleanNumber}:+${cleanNumber}
 item1.EMAIL;type=INTERNET:${gmail}
-item1.X-ABLabel:Email Owner
+item1.X-ABLabel:Email
 item2.URL:${instagram}
 item2.X-ABLabel:Instagram
 item3.ADR:;;🇮🇩 Indonesia;;;;
 item3.X-ABADR:ac
 END:VCARD`
 
+    // 4. Kirim Kontak
     const sentMsg = await conn.sendMessage(
         m.chat,
         {
@@ -31,10 +33,10 @@ END:VCARD`
                 contacts: [{ vcard }]
             }
         },
-        { quoted: m } // Menambahkan quoted agar bot membalas pesanmu
+        { quoted: m }
     )
 
-    await conn.reply(m.chat, "Itu adalah nomor owner Bot", sentMsg)
+    await conn.reply(m.chat, `Itu adalah nomor owner Bot`, sentMsg)
 }
 
 handler.command = handler.help = ['owner', 'creator'];
