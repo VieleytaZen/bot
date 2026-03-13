@@ -11,3 +11,4 @@ handler.command = /^afk$/i
 
 module.exports = handler
 //@${who.split`@`[0]}        /////@${m.sender.split`@`[0]
+//test aja
