@@ -13,7 +13,7 @@ global.wait = "_*Tunggu sedang di proses...*_"; // ini pesan simulasi loading
 global.eror = "_*Server Error*_"; // ini pesan saat terjadi kesalahan
 global.stiker_wait = "*⫹⫺ Stiker sedang dibuat...*"; // ini pesan simulasi saat loading pembuatan sticker
 global.packname = "Viel"; // watermark stikcker packname
-global.author = "ig: vielyeta_zen"; // watermark stikcker author
+global.author = "ig: vieleyta_zen"; // watermark stikcker author
 global.maxwarn = "5"; // Peringatan maksimum Warn
 
 global.autobio = false; // Set true/false untuk mengaktifkan atau mematikan autobio (default: false)
