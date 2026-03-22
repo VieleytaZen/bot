@@ -34,7 +34,7 @@ handler.all = async function (m) {
     this.autosave = this.autosave ? this.autosave : {}
     
     // Interval 1 jam (3600000 ms)
-    const interval = 60000 
+    const interval = 3600000
 
     // Cek apakah timer sudah berjalan atau belum
     if (!this.autosave.timer) {
