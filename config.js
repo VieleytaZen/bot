@@ -1,10 +1,10 @@
 require("dotenv").config();
 
-global.owner = ["6282133692292"]; // wajib di isi tidak boleh kosong
+global.owner = ["6285161444491"]; // wajib di isi tidak boleh kosong
 global.mods = ["6282133692292"]// wajib di isi tidak boleh kosong
 global.prems = ["6282133692292"]; // wajib di isi tidak boleh kosong
-global.nameowner = "Kii"; // wajib di isi tidak boleh kosong
-global.numberowner = "6282133692292"; // wajib di isi tidak boleh kosong
+global.nameowner = "Admin Viel"; // wajib di isi tidak boleh kosong
+global.numberowner = "6285161444491"; // wajib di isi tidak boleh kosong
 global.mail = "vieleytazen@gmail.com"; // wajib di isi tidak boleh kosong
 global.gc = "https://chat.whatsapp.com/BBl1lh2NlDU1cxAhjZlpnT"; // wajib di isi tidak boleh kosong
 global.instagram = "https://instagram.com/vieleyta_zen"; // wajib di isi tidak boleh kosong
