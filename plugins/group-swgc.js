@@ -4,16 +4,14 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
     // 1. Validasi Grup
     if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
 
-    // 2. JALUR AMAN: Panggil sesuai nama folder yang ada di package.json kamu
-    let Baileys;
-    try {
-        Baileys = require("@adiwajshing/baileys");
-    } catch (e) {
-        // Jika masih gagal, kita ambil dari default export
-        throw "Folder @adiwajshing/baileys tidak ditemukan. Coba ketik 'npm install' di terminal panel kamu.";
-    }
+    // 2. MENGAMBIL FUNGSI DARI MEMORI (Bukan dari Folder)
+    // Kita ambil dari constructor koneksi yang sedang jalan
+    const genContent = conn.generateWAMessageContent || m.conn?.generateWAMessageContent;
+    const genFromContent = conn.generateWAMessageFromContent || m.conn?.generateWAMessageFromContent;
 
-    const { generateWAMessageContent, generateWAMessageFromContent } = Baileys.default || Baileys;
+    if (!genContent || !genFromContent) {
+        throw "Aduh! Bot kamu menyembunyikan fungsi Baileys. Coba ketik 'npm install @whiskeysockets/baileys' di terminal panel lalu RESTART.";
+    }
 
     let q = m.quoted ? m.quoted : m;
     let mime = (q.msg || q).mimetype || q.mediaType || "";
@@ -53,12 +51,12 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
 
         const messageSecret = crypto.randomBytes(32);
         
-        // Gunakan fungsi upload dari koneksi bot kamu
-        const msgContent = await generateWAMessageContent(content, {
+        // Menggunakan fungsi yang kita "tangkap" dari koneksi
+        const msgContent = await genContent(content, {
             upload: conn.waUploadToServer,
         });
 
-        const message = generateWAMessageFromContent(
+        const message = genFromContent(
             targetGc,
             {
                 messageContextInfo: { messageSecret },
