@@ -4,30 +4,43 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
     if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
 
     try {
-        // Ambil loader sesuai main.js kamu
         const { loadBaileys } = require("../baileys-loader.mjs");
         const baileys = await loadBaileys();
-        const { generateWAMessageContent, generateWAMessageFromContent } = baileys.default || baileys;
+        const { 
+            generateWAMessageContent, 
+            generateWAMessageFromContent, 
+            prepareWAMessageMedia 
+        } = baileys.default || baileys;
 
-        // Tentukan sumber media (apakah reply atau pesan itu sendiri)
         let q = m.quoted ? m.quoted : m;
         let mime = (q.msg || q).mimetype || q.mediaType || "";
         let caption = text ? text.trim() : (q.msg?.caption || "");
 
         let content = {};
-        
-        // CEK APAKAH ADA MEDIA
-        if (/image|video|audio/.test(mime)) {
-            // DOWNLOAD MEDIA
-            let media = await q.download?.();
-            if (!media) throw "Gagal mendownload media! Pastikan medianya masih ada.";
+        let isMedia = /image|video|audio/.test(mime);
 
-            if (/image/.test(mime)) {
-                content = { image: media, caption };
-            } else if (/video/.test(mime)) {
-                content = { video: media, caption };
-            } else if (/audio/.test(mime)) {
-                content = { audio: media, mimetype: "audio/mpeg", ptt: false };
+        await m.reply(`_Sssttt... Viel lagi proses medianya, jangan berisik!_`);
+
+        if (isMedia) {
+            const media = await q.download?.();
+            if (!media) throw "Gagal mendownload media!";
+
+            // --- PERUBAHAN DISINI: Menggunakan prepareWAMessageMedia ---
+            const mediaPrepared = await prepareWAMessageMedia(
+                { [mime.split('/')[0]]: media }, 
+                { upload: conn.waUploadToServer }
+            );
+
+            // Ambil hasil preparasi (imageMessage/videoMessage)
+            const mediaType = mime.split('/')[0] + "Message";
+            content = {
+                [mediaType]: mediaPrepared[mediaType],
+                caption: caption
+            };
+            
+            // Khusus Audio
+            if (/audio/.test(mime)) {
+                content = { audio: media, mimetype: "audio/mpeg" };
             }
         } else if (caption) {
             content = { text: caption };
@@ -35,22 +48,21 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             throw `*Cara Pakai:* \nReply foto/video dengan perintah *${prefix + command}*`;
         }
 
-        await m.reply(`_Sssttt... Viel lagi up Status Grup..._`);
-
         let targetGc = m.chat;
         if (isOwner && caption.includes("|")) {
             const [idgc, ...rest] = caption.split("|");
             targetGc = idgc.trim().endsWith("@g.us") ? idgc.trim() : `${idgc.trim()}@g.us`;
-            if (content.caption !== undefined) content.caption = rest.join("|").trim();
-            if (content.text !== undefined) content.text = rest.join("|").trim();
+            const cleanText = rest.join("|").trim();
+            if (content.caption !== undefined) content.caption = cleanText;
+            if (content.text !== undefined) content.text = cleanText;
         }
 
-        // BAGIAN KRUSIAL: Upload media ke server WhatsApp
+        // --- KONSTRUKSI FINAL ---
         const messageSecret = crypto.randomBytes(32);
         
-        // Kita pakai waUploadToServer dari conn
+        // Bungkus konten menjadi Proto Message
         const msgContent = await generateWAMessageContent(content, {
-            upload: conn.waUploadToServer 
+            upload: conn.waUploadToServer,
         });
 
         const message = generateWAMessageFromContent(
@@ -64,9 +76,10 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
                     },
                 },
             },
-            { userJid: conn.user.id } // Tambahan agar server tahu siapa pengirimnya
+            { userJid: conn.user.id }
         );
 
+        // Kirim
         await conn.relayMessage(targetGc, message.message, {
             messageId: message.key.id,
         });
@@ -74,7 +87,7 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
         await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
     } catch (e) {
-        console.error(e);
+        console.error("SWGC ERROR:", e);
         m.reply(`❌ *Gagal:* ${e.message || e}`);
     }
 };
