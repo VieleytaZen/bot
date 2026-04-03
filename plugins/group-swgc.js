@@ -5,8 +5,8 @@ let baileysData = null;
 const loadBaileysInternal = async () => {
     if (!baileysData) {
         try {
-            // Menggunakan dynamic import karena banyak versi Baileys baru berbasis ESM
-            const baileys = await import('@whiskeysockets/baileys');
+            // Menggunakan require untuk library lama @adiwajshing/baileys
+            const baileys = require('@adiwajshing/baileys');
             baileysData = {
                 generateWAMessageContent: baileys.generateWAMessageContent,
                 generateWAMessageFromContent: baileys.generateWAMessageFromContent,
@@ -14,7 +14,7 @@ const loadBaileysInternal = async () => {
             };
         } catch (e) {
             console.error("Gagal memuat modul Baileys:", e);
-            throw "Library @whiskeysockets/baileys tidak ditemukan!";
+            throw "Library @adiwajshing/baileys tidak ditemukan! Pastikan sudah install melalui npm.";
         }
     }
     return baileysData;
@@ -67,6 +67,7 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
         }
 
         // 5. Konstruksi Group Status Message V2
+        // Catatan: Pastikan versi @adiwajshing/baileys kamu sudah mendukung groupStatusMessageV2
         const inside = await generateWAMessageContent(content, {
             upload: conn.waUploadToServer,
         });
