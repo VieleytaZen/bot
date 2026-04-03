@@ -1,31 +1,18 @@
 const crypto = require("crypto");
 
-// --- LOADER ---
-let Baileys;
-try {
-    // Kita coba panggil WhiskeySockets dulu karena di package.json kamu merujuk ke sana
-    Baileys = require("@whiskeysockets/baileys");
-} catch {
-    try {
-        Baileys = require("@adiwajshing/baileys");
-    } catch {
-        Baileys = require("baileys");
-    }
-}
-
-const { 
-    generateWAMessageContent, 
-    generateWAMessageFromContent 
-} = Baileys?.default || Baileys || {};
-
 let handler = async (m, { conn, text, command, prefix, isOwner }) => {
-    // 1. Cek apakah fungsi Baileys ada (Anti Error)
-    if (!generateWAMessageContent || !generateWAMessageFromContent) {
-        throw "Modul Baileys nggak kebaca, Oki. Coba restart panel/terminalnya!";
-    }
-
-    // 2. Validasi Grup
+    // 1. Validasi Grup
     if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
+
+    // 2. AMBIL FUNGSI DARI KONEKSI (Jalur Langsung)
+    // Kita coba ambil dari berbagai kemungkinan lokasi di objek 'conn'
+    const Baileys = require("@whiskeysockets/baileys") || require("@adiwajshing/baileys") || {};
+    const genContent = Baileys.generateWAMessageContent || conn.generateWAMessageContent;
+    const genFromContent = Baileys.generateWAMessageFromContent || conn.generateWAMessageFromContent;
+
+    if (!genContent || !genFromContent) {
+        throw "Aduh! Bot kamu nggak ngasih izin akses fungsi Baileys. Coba restart panel/terminalnya dulu ya!";
+    }
 
     let q = m.quoted ? m.quoted : m;
     let mime = (q.msg || q).mimetype || q.mediaType || "";
@@ -37,7 +24,7 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
 
         if (isMedia) {
             const media = await q.download?.();
-            if (!media) throw "Gagal download media!";
+            if (!media) throw "Gagal mendownload media! Coba kirim ulang gambarnya.";
 
             if (/image/.test(mime)) {
                 content = { image: media, caption };
@@ -63,15 +50,15 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             if (content.text !== undefined) content.text = cleanText;
         }
 
-        // --- PROSES PEMBUATAN PESAN ---
+        // --- PROSES SWGC ---
         const messageSecret = crypto.randomBytes(32);
         
-        // Memakai generateWAMessageContent (Sesuai saran tapi tetap pakai fungsi aslinya)
-        const msgContent = await generateWAMessageContent(content, {
+        // Gunakan fungsi yang sudah kita "tangkap" tadi
+        const msgContent = await genContent(content, {
             upload: conn.waUploadToServer,
         });
 
-        const message = generateWAMessageFromContent(
+        const message = genFromContent(
             targetGc,
             {
                 messageContextInfo: { messageSecret },
