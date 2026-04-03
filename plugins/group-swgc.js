@@ -3,81 +3,79 @@ const crypto = require("crypto");
 let handler = async (m, { conn, text, command, prefix, isOwner }) => {
     if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
 
+    let q = m.quoted ? m.quoted : m;
+    let mime = (q.msg || q).mimetype || q.mediaType || "";
+    let caption = text ? text.trim() : (q.msg?.caption || "");
+
     try {
-        const { loadBaileys } = require("../baileys-loader.mjs");
-        const baileys = await loadBaileys();
-        const { generateWAMessageContent, generateWAMessageFromContent } = baileys.default || baileys;
-
-        let q = m.quoted ? m.quoted : m;
-        let mime = (q.msg || q).mimetype || q.mediaType || "";
-        let caption = text ? text.trim() : (q.msg?.caption || "");
-
-        let content = {};
-        let isMedia = /image|video|audio/.test(mime);
-
-        if (isMedia) {
-            const media = await q.download?.();
-            if (!media) throw "Gagal download media!";
-
-            // Menggunakan struktur langsung agar tidak "Invalid Media Type"
-            if (/image/.test(mime)) {
-                content = { image: media, caption: caption };
-            } else if (/video/.test(mime)) {
-                content = { video: media, caption: caption };
-            } else if (/audio/.test(mime)) {
-                content = { audio: media, mimetype: 'audio/mp4', ptt: false };
-            }
-        } else if (caption) {
-            content = { text: caption };
-        } else {
-            throw `*Cara Pakai:* \nReply foto/video dengan perintah *${prefix + command}*`;
-        }
-
-        await m.reply(`_Sedang mengirim Status Grup... Sabar ya!_`);
-
         let targetGc = m.chat;
         if (isOwner && caption.includes("|")) {
             const [idgc, ...rest] = caption.split("|");
             targetGc = idgc.trim().endsWith("@g.us") ? idgc.trim() : `${idgc.trim()}@g.us`;
-            const cleanText = rest.join("|").trim();
-            if (content.caption !== undefined) content.caption = cleanText;
-            if (content.text !== undefined) content.text = cleanText;
+            caption = rest.join("|").trim();
         }
 
-        // --- PROSES WRAPPING ---
+        await m.reply(`_Viel lagi coba jalur paksa... Mohon doa restunya!_`);
+
+        let message;
         const messageSecret = crypto.randomBytes(32);
-        
-        // Langsung bungkus tanpa prepare manual yang bikin error
-        const msgContent = await generateWAMessageContent(content, {
-            upload: conn.waUploadToServer
-        });
 
-        // Cek jika msgContent kosong (Gagal upload)
-        if (Object.keys(msgContent).length === 0) throw "Gagal menyiapkan konten media.";
+        if (/image|video/.test(mime)) {
+            // Jalur Media: Kita buat pesan media biasa dulu, lalu kita bungkus ke Status V2
+            let media = await q.download();
+            if (!media) throw "Gagal download media!";
 
-        const message = generateWAMessageFromContent(
-            targetGc,
-            {
+            // Kita gunakan sendMessage tapi kita 'tahan' agar tidak terkirim dulu
+            let rawMedia = await conn.prepareMessage(targetGc, media, /image/.test(mime) ? 'imageMessage' : 'videoMessage', { 
+                caption,
+                upload: conn.waUploadToServer 
+            });
+
+            message = {
                 messageContextInfo: { messageSecret },
                 groupStatusMessageV2: {
                     message: {
-                        ...msgContent,
+                        ...rawMedia,
                         messageContextInfo: { messageSecret },
                     },
                 },
-            },
-            { userJid: conn.user.id }
-        );
+            };
+        } else {
+            // Jalur Teks
+            message = {
+                messageContextInfo: { messageSecret },
+                groupStatusMessageV2: {
+                    message: {
+                        conversation: caption,
+                        messageContextInfo: { messageSecret },
+                    },
+                },
+            };
+        }
 
-        await conn.relayMessage(targetGc, message.message, {
-            messageId: message.key.id,
+        // KIRIM VIA RELAY
+        await conn.relayMessage(targetGc, message, {
+            messageId: conn.generateMessageID(),
+            additionalAttributes: {
+                category: "peer",
+            }
         });
 
         await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
     } catch (e) {
-        console.error("SWGC Error:", e);
-        m.reply(`❌ *Gagal:* ${e.message || e}`);
+        console.error("SWGC CRITICAL ERROR:", e);
+        // Fallback terakhir: Kirim teks saja kalau media benar-benar ditolak
+        try {
+            const messageSecret = crypto.randomBytes(32);
+            await conn.relayMessage(m.chat, {
+                groupStatusMessageV2: {
+                    message: { conversation: text || "Gagal memuat media, hanya teks yang terkirim." }
+                }
+            }, {});
+        } catch (err) {
+            m.reply(`❌ *Gagal Total:* ${e.message || e}`);
+        }
     }
 };
 
