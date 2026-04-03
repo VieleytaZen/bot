@@ -6,11 +6,7 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
     try {
         const { loadBaileys } = require("../baileys-loader.mjs");
         const baileys = await loadBaileys();
-        const { 
-            generateWAMessageContent, 
-            generateWAMessageFromContent, 
-            prepareWAMessageMedia 
-        } = baileys.default || baileys;
+        const { generateWAMessageContent, generateWAMessageFromContent } = baileys.default || baileys;
 
         let q = m.quoted ? m.quoted : m;
         let mime = (q.msg || q).mimetype || q.mediaType || "";
@@ -19,34 +15,25 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
         let content = {};
         let isMedia = /image|video|audio/.test(mime);
 
-        await m.reply(`_Sssttt... Viel lagi proses medianya, jangan berisik!_`);
-
         if (isMedia) {
             const media = await q.download?.();
-            if (!media) throw "Gagal mendownload media!";
+            if (!media) throw "Gagal download media!";
 
-            // --- PERUBAHAN DISINI: Menggunakan prepareWAMessageMedia ---
-            const mediaPrepared = await prepareWAMessageMedia(
-                { [mime.split('/')[0]]: media }, 
-                { upload: conn.waUploadToServer }
-            );
-
-            // Ambil hasil preparasi (imageMessage/videoMessage)
-            const mediaType = mime.split('/')[0] + "Message";
-            content = {
-                [mediaType]: mediaPrepared[mediaType],
-                caption: caption
-            };
-            
-            // Khusus Audio
-            if (/audio/.test(mime)) {
-                content = { audio: media, mimetype: "audio/mpeg" };
+            // Menggunakan struktur langsung agar tidak "Invalid Media Type"
+            if (/image/.test(mime)) {
+                content = { image: media, caption: caption };
+            } else if (/video/.test(mime)) {
+                content = { video: media, caption: caption };
+            } else if (/audio/.test(mime)) {
+                content = { audio: media, mimetype: 'audio/mp4', ptt: false };
             }
         } else if (caption) {
             content = { text: caption };
         } else {
             throw `*Cara Pakai:* \nReply foto/video dengan perintah *${prefix + command}*`;
         }
+
+        await m.reply(`_Sedang mengirim Status Grup... Sabar ya!_`);
 
         let targetGc = m.chat;
         if (isOwner && caption.includes("|")) {
@@ -57,13 +44,16 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             if (content.text !== undefined) content.text = cleanText;
         }
 
-        // --- KONSTRUKSI FINAL ---
+        // --- PROSES WRAPPING ---
         const messageSecret = crypto.randomBytes(32);
         
-        // Bungkus konten menjadi Proto Message
+        // Langsung bungkus tanpa prepare manual yang bikin error
         const msgContent = await generateWAMessageContent(content, {
-            upload: conn.waUploadToServer,
+            upload: conn.waUploadToServer
         });
+
+        // Cek jika msgContent kosong (Gagal upload)
+        if (Object.keys(msgContent).length === 0) throw "Gagal menyiapkan konten media.";
 
         const message = generateWAMessageFromContent(
             targetGc,
@@ -79,7 +69,6 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             { userJid: conn.user.id }
         );
 
-        // Kirim
         await conn.relayMessage(targetGc, message.message, {
             messageId: message.key.id,
         });
@@ -87,7 +76,7 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
         await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
     } catch (e) {
-        console.error("SWGC ERROR:", e);
+        console.error("SWGC Error:", e);
         m.reply(`❌ *Gagal:* ${e.message || e}`);
     }
 };
