@@ -1,53 +1,59 @@
 const crypto = require("crypto");
 
-// --- INTERNAL BAILEYS LOADER (FIXED) ---
+/**
+ * --- INTERNAL BAILEYS LOADER (STABLE) ---
+ * Fungsi ini otomatis mencari library Baileys yang terinstall 
+ * baik itu @adiwajshing, @whiskeysockets, atau standar 'baileys'.
+ */
 let baileysData = null;
 const loadBaileysInternal = async () => {
     if (!baileysData) {
-        try {
-            // Kita coba panggil library yang terpasang
-            const baileys = require("@adiwajshing/baileys");
-            
-            // Pada versi baru, terkadang fungsi ada di dalam properti 'default'
-            const root = baileys.default || baileys;
-            
-            baileysData = {
-                generateWAMessageContent: root.generateWAMessageContent,
-                generateWAMessageFromContent: root.generateWAMessageFromContent,
-                proto: root.proto,
-            };
+        const modules = ["@whiskeysockets/baileys", "@adiwajshing/baileys", "baileys"];
+        let lib;
 
-            if (!baileysData.generateWAMessageContent) {
-                throw new Error("Fungsi generateWAMessageContent tidak ditemukan.");
+        for (const mod of modules) {
+            try {
+                lib = require(mod);
+                break;
+            } catch (e) {
+                continue;
             }
-        } catch (e) {
-            console.error("Gagal memuat modul Baileys:", e);
-            throw "Gagal memuat library Baileys. Pastikan struktur modul benar!";
         }
+
+        if (!lib) {
+            throw "Modul Baileys tidak ditemukan! Jalankan 'npm install @whiskeysockets/baileys' di terminal.";
+        }
+
+        const root = lib.default || lib;
+        baileysData = {
+            generateWAMessageContent: root.generateWAMessageContent,
+            generateWAMessageFromContent: root.generateWAMessageFromContent,
+            proto: root.proto,
+        };
     }
     return baileysData;
 };
 
 let handler = async (m, { conn, text, command, prefix, isOwner }) => {
-    // 1. Validasi: Hanya untuk Grup
-    if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
-
-    // Muat fungsi internal Baileys
-    const { generateWAMessageContent, generateWAMessageFromContent } = await loadBaileysInternal();
-
-    // 2. Tentukan sumber media
-    let q = m.quoted ? m.quoted : m;
-    let mime = (q.msg || q).mimetype || q.mediaType || "";
-    let caption = text ? text.trim() : "";
+    // 1. Validasi Grup
+    if (!m.isGroup) throw "*Hmph!* Perintah ini cuma bisa dipakai di dalam GRUP! 😤";
 
     try {
+        // Muat fungsi internal
+        const { generateWAMessageContent, generateWAMessageFromContent } = await loadBaileysInternal();
+
+        // 2. Tentukan sumber media (Quoted atau pesan asli)
+        let q = m.quoted ? m.quoted : m;
+        let mime = (q.msg || q).mimetype || q.mediaType || "";
+        let caption = text ? text.trim() : "";
+
         let content = {};
         let isMedia = /image|video|audio/.test(mime);
 
-        // 3. Logika Penentuan Konten
+        // 3. Logika Penentuan Konten (Media vs Teks)
         if (isMedia) {
             const media = await q.download?.();
-            if (!media) throw "Gagal mendownload media!";
+            if (!media) throw "Gagal mendownload media! Coba kirim ulang medianya.";
 
             if (/image/.test(mime)) {
                 content = { image: media, caption };
@@ -62,20 +68,20 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             throw `*Cara Pakai:* \nReply foto/video atau ketik teks dengan perintah *${prefix + command}*`;
         }
 
-        await m.reply(`_Sedang mengirim Status Grup..._`);
+        await m.reply(`_Sssttt... Sedang mengirim Status Grup..._`);
 
-        // 4. Penentuan Target Grup (Fitur khusus Owner)
+        // 4. Penentuan Target Grup (Fitur Khusus Owner: idgc|caption)
         let targetGc = m.chat;
         if (isOwner && caption.includes("|")) {
             const [idgc, ...rest] = caption.split("|");
-            targetGc = idgc.trim().includes("@g.us") ? idgc.trim() : `${idgc.trim()}@g.us`;
+            targetGc = idgc.trim().endsWith("@g.us") ? idgc.trim() : `${idgc.trim()}@g.us`;
             const cleanText = rest.join("|").trim();
             if (content.caption !== undefined) content.caption = cleanText;
             if (content.text !== undefined) content.text = cleanText;
         }
 
         // 5. Konstruksi Group Status Message V2
-        // Kita gunakan waUploadToServer dari koneksi utama
+        // Pastikan 'conn.waUploadToServer' tersedia di base bot kamu
         const inside = await generateWAMessageContent(content, {
             upload: conn.waUploadToServer,
         });
@@ -95,16 +101,16 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             {}
         );
 
-        // 6. Pengiriman menggunakan RelayMessage
+        // 6. Eksekusi Pengiriman via RelayMessage
         await conn.relayMessage(targetGc, message.message, {
             messageId: message.key.id,
         });
 
-        // Beri reaksi sukses
+        // Reaksi Sukses
         await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
     } catch (e) {
-        console.error(e);
+        console.error("Error SWGC:", e);
         m.reply(`❌ *Gagal:* ${e.message || e}`);
     }
 };
