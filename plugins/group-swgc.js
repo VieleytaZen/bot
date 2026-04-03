@@ -4,15 +4,16 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
     // 1. Validasi Grup
     if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
 
-    // 2. AMBIL FUNGSI DARI KONEKSI (Jalur Langsung)
-    // Kita coba ambil dari berbagai kemungkinan lokasi di objek 'conn'
-    const Baileys = require("@whiskeysockets/baileys") || require("@adiwajshing/baileys") || {};
-    const genContent = Baileys.generateWAMessageContent || conn.generateWAMessageContent;
-    const genFromContent = Baileys.generateWAMessageFromContent || conn.generateWAMessageFromContent;
-
-    if (!genContent || !genFromContent) {
-        throw "Aduh! Bot kamu nggak ngasih izin akses fungsi Baileys. Coba restart panel/terminalnya dulu ya!";
+    // 2. JALUR AMAN: Panggil sesuai nama folder yang ada di package.json kamu
+    let Baileys;
+    try {
+        Baileys = require("@adiwajshing/baileys");
+    } catch (e) {
+        // Jika masih gagal, kita ambil dari default export
+        throw "Folder @adiwajshing/baileys tidak ditemukan. Coba ketik 'npm install' di terminal panel kamu.";
     }
+
+    const { generateWAMessageContent, generateWAMessageFromContent } = Baileys.default || Baileys;
 
     let q = m.quoted ? m.quoted : m;
     let mime = (q.msg || q).mimetype || q.mediaType || "";
@@ -50,15 +51,14 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             if (content.text !== undefined) content.text = cleanText;
         }
 
-        // --- PROSES SWGC ---
         const messageSecret = crypto.randomBytes(32);
         
-        // Gunakan fungsi yang sudah kita "tangkap" tadi
-        const msgContent = await genContent(content, {
+        // Gunakan fungsi upload dari koneksi bot kamu
+        const msgContent = await generateWAMessageContent(content, {
             upload: conn.waUploadToServer,
         });
 
-        const message = genFromContent(
+        const message = generateWAMessageFromContent(
             targetGc,
             {
                 messageContextInfo: { messageSecret },
