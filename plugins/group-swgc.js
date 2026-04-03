@@ -1,54 +1,27 @@
+const { 
+    generateWAMessageContent, 
+    generateWAMessageFromContent, 
+    proto 
+} = require("@adiwajshing/baileys");
 const crypto = require("crypto");
 
-// --- INTERNAL BAILEYS LOADER (FORCED @ADIWAJSHING) ---
-let baileysData = null;
-const loadBaileysInternal = async () => {
-    if (!baileysData) {
-        try {
-            // Memaksa memanggil folder @adiwajshing yang kamu miliki
-            const baileys = require("@adiwajshing/baileys");
-            
-            // Mencoba mengambil dari export default atau langsung
-            const root = baileys.default || baileys;
-            
-            if (!root.generateWAMessageContent) {
-                // Jika masih gagal, kita coba akses sub-modulnya langsung
-                baileysData = {
-                    generateWAMessageContent: require("@adiwajshing/baileys/lib/Utils").generateWAMessageContent,
-                    generateWAMessageFromContent: require("@adiwajshing/baileys/lib/Utils").generateWAMessageFromContent,
-                    proto: root.proto || require("@adiwajshing/baileys/WAProto").proto
-                };
-            } else {
-                baileysData = {
-                    generateWAMessageContent: root.generateWAMessageContent,
-                    generateWAMessageFromContent: root.generateWAMessageFromContent,
-                    proto: root.proto,
-                };
-            }
-        } catch (e) {
-            console.error("Gagal total memuat @adiwajshing:", e);
-            throw "Sistem tidak bisa menemukan folder '@adiwajshing/baileys'. Cek apakah folder itu ada di node_modules!";
-        }
-    }
-    return baileysData;
-};
-
 let handler = async (m, { conn, text, command, prefix, isOwner }) => {
+    // 1. Validasi Grup
     if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
 
+    // 2. Tentukan sumber media
+    let q = m.quoted ? m.quoted : m;
+    let mime = (q.msg || q).mimetype || q.mediaType || "";
+    let caption = text ? text.trim() : "";
+
     try {
-        const { generateWAMessageContent, generateWAMessageFromContent } = await loadBaileysInternal();
-
-        let q = m.quoted ? m.quoted : m;
-        let mime = (q.msg || q).mimetype || q.mediaType || "";
-        let caption = text ? text.trim() : "";
-
         let content = {};
         let isMedia = /image|video|audio/.test(mime);
 
+        // 3. Logika Penentuan Konten
         if (isMedia) {
             const media = await q.download?.();
-            if (!media) throw "Gagal mendownload media!";
+            if (!media) throw "Gagal mendownload media! Pastikan file belum kadaluwarsa.";
 
             if (/image/.test(mime)) {
                 content = { image: media, caption };
@@ -63,8 +36,9 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             throw `*Cara Pakai:* \nReply foto/video atau ketik teks dengan perintah *${prefix + command}*`;
         }
 
-        await m.reply(`_Sedang memproses SWGC..._`);
+        await m.reply(`_Sedang mengirim Status Grup... Tunggu ya, Viel lagi proses!_`);
 
+        // 4. Penentuan Target Grup (Fitur Khusus Owner)
         let targetGc = m.chat;
         if (isOwner && caption.includes("|")) {
             const [idgc, ...rest] = caption.split("|");
@@ -74,18 +48,21 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             if (content.text !== undefined) content.text = cleanText;
         }
 
-        const inside = await generateWAMessageContent(content, {
+        // 5. Konstruksi Group Status Message V2
+        const messageSecret = crypto.randomBytes(32);
+        
+        // Menggunakan helper upload dari koneksi bot
+        const msgContent = await generateWAMessageContent(content, {
             upload: conn.waUploadToServer,
         });
 
-        const messageSecret = crypto.randomBytes(32);
         const message = generateWAMessageFromContent(
             targetGc,
             {
                 messageContextInfo: { messageSecret },
                 groupStatusMessageV2: {
                     message: {
-                        ...inside,
+                        ...msgContent,
                         messageContextInfo: { messageSecret },
                     },
                 },
@@ -93,15 +70,17 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             {}
         );
 
+        // 6. Pengiriman menggunakan RelayMessage
         await conn.relayMessage(targetGc, message.message, {
             messageId: message.key.id,
         });
 
+        // Beri reaksi sukses
         await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
     } catch (e) {
-        console.error(e);
-        m.reply(`❌ *Error:* ${e.message || e}`);
+        console.error("Error SWGC Plugin:", e);
+        m.reply(`❌ *Gagal:* ${e.message || e}`);
     }
 };
 
