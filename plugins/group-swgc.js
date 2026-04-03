@@ -1,36 +1,31 @@
 const crypto = require("crypto");
 
-// --- MULTI-PATH LOADER ---
-// Mencoba memanggil modul dari berbagai kemungkinan nama folder
+// --- LOADER ---
 let Baileys;
 try {
+    // Kita coba panggil WhiskeySockets dulu karena di package.json kamu merujuk ke sana
     Baileys = require("@whiskeysockets/baileys");
 } catch {
     try {
-        Baileys = require("baileys");
+        Baileys = require("@adiwajshing/baileys");
     } catch {
-        try {
-            Baileys = require("@adiwajshing/baileys");
-        } catch (e) {
-            console.error("Critical: Semua path Baileys gagal dimuat.");
-        }
+        Baileys = require("baileys");
     }
 }
 
-// Pastikan kita mengambil objek yang benar (handle ESM default export)
 const { 
     generateWAMessageContent, 
-    generateWAMessageFromContent, 
-    proto 
+    generateWAMessageFromContent 
 } = Baileys?.default || Baileys || {};
 
 let handler = async (m, { conn, text, command, prefix, isOwner }) => {
-    if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
-    
-    // Proteksi jika library benar-benar tidak terdeteksi
-    if (!generateWAMessageContent) {
-        throw "Library Baileys tidak terdeteksi. Silakan hubungi Owner untuk cek node_modules.";
+    // 1. Cek apakah fungsi Baileys ada (Anti Error)
+    if (!generateWAMessageContent || !generateWAMessageFromContent) {
+        throw "Modul Baileys nggak kebaca, Oki. Coba restart panel/terminalnya!";
     }
+
+    // 2. Validasi Grup
+    if (!m.isGroup) throw "*Hmph!* Perintah ini cuma untuk di dalam GRUP! 😤";
 
     let q = m.quoted ? m.quoted : m;
     let mime = (q.msg || q).mimetype || q.mediaType || "";
@@ -42,7 +37,7 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
 
         if (isMedia) {
             const media = await q.download?.();
-            if (!media) throw "Gagal mendownload media! Coba kirim ulang gambarnya.";
+            if (!media) throw "Gagal download media!";
 
             if (/image/.test(mime)) {
                 content = { image: media, caption };
@@ -57,7 +52,7 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             throw `*Cara Pakai:* \nReply foto/video atau ketik teks dengan perintah *${prefix + command}*`;
         }
 
-        await m.reply(`_Sssttt... Sedang memproses Status Grup..._`);
+        await m.reply(`_Sssttt... Viel lagi up Status Grup..._`);
 
         let targetGc = m.chat;
         if (isOwner && caption.includes("|")) {
@@ -68,7 +63,10 @@ let handler = async (m, { conn, text, command, prefix, isOwner }) => {
             if (content.text !== undefined) content.text = cleanText;
         }
 
+        // --- PROSES PEMBUATAN PESAN ---
         const messageSecret = crypto.randomBytes(32);
+        
+        // Memakai generateWAMessageContent (Sesuai saran tapi tetap pakai fungsi aslinya)
         const msgContent = await generateWAMessageContent(content, {
             upload: conn.waUploadToServer,
         });
