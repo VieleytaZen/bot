@@ -22,7 +22,7 @@ global.spam = false; // Set true/false untuk anti spam (default: false)
 global.gcspam = false; // Set true/false untuk menutup grup ketika spam (default: false)
 
 // APIKEY INI WAJIB DI ISI! //
-global.btc = "viel";
+global.btc = "beta-rxyzal";
 // global.btc = process.env.API_KEY_BTC;
 // aktifkan akses .env di atas jika kamu ingin menaruh key api di .env
 // Daftar terlebih dahulu https://api.botcahx.eu.org
